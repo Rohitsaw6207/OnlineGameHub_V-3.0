@@ -19,9 +19,9 @@ A modern online gaming platform built with **React.js** and **Firebase**, offeri
 ---
 
 ## 📸 **Preview**
-<img src="assets/images/001.png" alt="OnlineGameHub Screenshot 1" width="300"/>
-<img src="assets/images/002.png" alt="OnlineGameHub Screenshot 2" width="300"/>
-<img src="assets/images/003.png" alt="OnlineGameHub Screenshot 3" width="300"/>
+<img src="/001.png" alt="OnlineGameHub Screenshot 1" width="300"/>
+<img src="/002.png" alt="OnlineGameHub Screenshot 2" width="300"/>
+<img src="/003.png" alt="OnlineGameHub Screenshot 3" width="300"/>
 
 ---
 
