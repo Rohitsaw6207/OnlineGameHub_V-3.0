@@ -41,7 +41,7 @@ A modern online gaming platform built with **React.js** and **Firebase**, offeri
 - React.js (with Hooks + functional components)  
 - Firebase Authentication  
 - Firestore Database  
-- Tailwind CSS (or your CSS framework if applicable)  
+- Tailwind CSS 
 - Vercel (Deployment + Hosting)
 
 ---
