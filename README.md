@@ -1,12 +1,14 @@
-# 🎮 OnlineGameHub  
+# 🎮 OnlineGameHub
 
-A modern online gaming platform built with **React.js** and **Firebase**, offering a collection of interactive browser games with user authentication and profile features.  
+**OnlineGameHub** is a modern, mobile-friendly gaming platform built using **React.js** and **Firebase**.  
+It provides a sleek interface with multiple classic browser games, user authentication, theme toggling, and personalized user profiles — all in one place.
 
 🌐 **Live Demo:** [https://onlinegamehub.in](https://onlinegamehub.in)
 
 ---
 
-## 🕹️ **Games Available**
+## 🕹️ Games Included
+
 - ✅ Tic Tac Toe
 - ✅ Chess
 - ✅ Pong
@@ -14,45 +16,54 @@ A modern online gaming platform built with **React.js** and **Firebase**, offeri
 - ✅ Breakout
 - ✅ Sudoku
 - ✅ Fly Bird Game  
-*(...and more!)*  
+*(...more being added!)*
+
+Each game is optimized for desktop and mobile with responsive canvas rendering.
 
 ---
 
-## 📸 **Preview**
-<img src="https://github.com/Rohitsaw6207/OnlineGameHub_V-3.0/blob/main/public/001.png" alt="OnlineGameHub Screenshot 1"/>
-<img src="https://github.com/Rohitsaw6207/OnlineGameHub_V-3.0/blob/main/public/002.png" alt="OnlineGameHub Screenshot 2"/>
-<img src="https://github.com/Rohitsaw6207/OnlineGameHub_V-3.0/blob/main/public/003.png" alt="OnlineGameHub Screenshot 3"/>
+## 📸 Preview
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rohitsaw6207/OnlineGameHub_V-3.0/main/public/001.png" width="30%" />
+  <img src="https://raw.githubusercontent.com/Rohitsaw6207/OnlineGameHub_V-3.0/main/public/002.png" width="30%" />
+  <img src="https://raw.githubusercontent.com/Rohitsaw6207/OnlineGameHub_V-3.0/main/public/003.png" width="30%" />
+</p>
 
 ---
 
-## 🚀 **Features**
-- 🎮 Collection of classic browser games  
-- 🔑 User authentication with Firebase (sign up, login, reset password)  
-- 🖼️ Profile with avatar selection  
-- ⚡ Fast and responsive React-based UI  
-- ☁ Firestore database integration  
-- 🌗 Theme toggling (light/dark mode)  
-- 📱 Fully responsive and mobile-friendly  
-- 🌐 Hosted on Vercel with custom domain  
+## 🚀 Key Features
+
+- 🎮 **Multiple Games** — Classic games playable directly in-browser
+- 🔐 **User Authentication** — Register, login, reset password using Firebase Auth
+- 🧑 **User Profiles** — Avatars, email ID display, persistent login
+- 🌙 **Theme Toggle** — Light & dark mode support with Tailwind + localStorage
+- 📊 **Firestore Integration** — Real-time database structure for storing user info
+- ⚡ **Smooth Navigation** — SPA-style routing and game switching
+- 📱 **Fully Responsive** — Designed for both mobile and desktop devices
+- 🔗 **Custom Domain** — Hosted on Vercel at [onlinegamehub.in](https://onlinegamehub.in)
 
 ---
 
-## 🛠 **Tech Stack**
-- React.js (with Hooks + functional components)  
-- Firebase Authentication  
-- Firestore Database  
-- Tailwind CSS 
-- Vercel (Deployment + Hosting)
+## 🛠 Tech Stack
+
+| Frontend | Backend/Auth | Database | Deployment |
+|----------|--------------|----------|-------------|
+| React.js (Vite) | Firebase Authentication | Firestore DB | Vercel (Custom Domain) |
+| Tailwind CSS | React Context API | Firebase Hosting (optional) | GitHub CI/CD |
+| React Router | - | - | - |
 
 ---
 
-## 📜 **License**
-All rights reserved. See [LICENSE](LICENSE) for details.
+## 📜 License
 
----
+This project is protected under **All Rights Reserved © 2025 by Rohit Kumar Saw**.  
+You are **not allowed to copy, reuse, or modify** this project for commercial or academic purposes without **explicit written permission**.
 
-## 🙌 **Author**
-**Rohit Kumar Saw**  
-📧 [rohitku6207@gmail.com](mailto:rohitku6207@gmail.com)  
-🌐 [https://onlinegamehub.in](https://onlinegamehub.in)  
-💼 [LinkedIn](https://www.linkedin.com/in/rohit-kumar-saw6207) | [GitHub](https://github.com/Rohitsaw6207)
+🚫 **Do not copy or redistribute any part of this code, design, or content without consent.**
+
+If you wish to collaborate, contribute, or learn from this project, feel free to reach out.
+
+📧 Contact: [rohitku6207@gmail.com](mailto:rohitku6207@gmail.com)
+
+
