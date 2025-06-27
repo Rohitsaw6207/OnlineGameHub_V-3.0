@@ -47,11 +47,11 @@ Each game is optimized for desktop and mobile with responsive canvas rendering.
 
 ## 🛠 Tech Stack
 
-| Frontend | Backend/Auth | Database | Deployment |
-|----------|--------------|----------|-------------|
-| React.js (Vite) | Firebase Authentication | Firestore DB | Vercel (Custom Domain) |
-| Tailwind CSS | React Context API | Firebase Hosting (optional) | GitHub CI/CD |
-| React Router | - | - | - |
+- **Frontend:** React.js (with Vite), Tailwind CSS, React Router
+- **Backend/Auth:** Firebase Authentication
+- **Database:** Firebase Firestore
+- **Deployment:** Vercel (with custom domain onlinegamehub.in)
+- **State Management:** React Context API
 
 ---
 
