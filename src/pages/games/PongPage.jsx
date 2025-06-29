@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext'
+import { motion } from 'framer-motion'
+import GameResultModal from '../../components/common/GameResultModal'
 
 const PongPage = () => {
   const { theme } = useTheme()
@@ -8,11 +10,18 @@ const PongPage = () => {
   const [score, setScore] = useState({ player: 0, ai: 0 })
   const [gameOver, setGameOver] = useState(false)
   const [winner, setWinner] = useState(null)
-  const [difficulty, setDifficulty] = useState('medium') // easy, medium, hard
+  const [difficulty, setDifficulty] = useState('hard')
+  const [showResultModal, setShowResultModal] = useState(false)
 
   useEffect(() => {
     document.title = 'Pong - Online Game Hub'
   }, [])
+
+  useEffect(() => {
+    if (gameOver) {
+      setShowResultModal(true)
+    }
+  }, [gameOver])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -23,57 +32,57 @@ const PongPage = () => {
     const height = canvas.height
     
     // Game objects
-    const paddleHeight = 80
-    const paddleWidth = 10
-    const ballRadius = 8
+    const paddleHeight = 100
+    const paddleWidth = 15
+    const ballRadius = 12
     
     let playerY = height / 2 - paddleHeight / 2
     let aiY = height / 2 - paddleHeight / 2
     let ballX = width / 2
     let ballY = height / 2
-    let ballSpeedX = 5
-    let ballSpeedY = 3
+    let ballSpeedX = 6
+    let ballSpeedY = 4
     
-    // AI difficulty settings
+    // AI difficulty settings - make it very challenging
     let aiSpeed
+    let aiPrediction
     switch (difficulty) {
       case 'easy':
-        aiSpeed = 3
-        break
-      case 'hard':
-        aiSpeed = 6
+        aiSpeed = 4
+        aiPrediction = 0.7
         break
       case 'medium':
+        aiSpeed = 6
+        aiPrediction = 0.85
+        break
+      case 'hard':
       default:
-        aiSpeed = 4.5
+        aiSpeed = 8
+        aiPrediction = 0.95
         break
     }
     
-    // Mouse movement for player paddle
+    // Mouse and touch movement
     const handleMouseMove = (e) => {
       const canvasRect = canvas.getBoundingClientRect()
       const mouseY = e.clientY - canvasRect.top
       
-      // Keep paddle within canvas
-      if (mouseY > 0 && mouseY < height - paddleHeight) {
-        playerY = mouseY
+      if (mouseY > paddleHeight / 2 && mouseY < height - paddleHeight / 2) {
+        playerY = mouseY - paddleHeight / 2
       }
     }
     
-    canvas.addEventListener('mousemove', handleMouseMove)
-    
-    // Touch movement for mobile
     const handleTouchMove = (e) => {
       e.preventDefault()
       const canvasRect = canvas.getBoundingClientRect()
       const touchY = e.touches[0].clientY - canvasRect.top
       
-      // Keep paddle within canvas
-      if (touchY > 0 && touchY < height - paddleHeight) {
-        playerY = touchY
+      if (touchY > paddleHeight / 2 && touchY < height - paddleHeight / 2) {
+        playerY = touchY - paddleHeight / 2
       }
     }
     
+    canvas.addEventListener('mousemove', handleMouseMove)
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
     
     // Game loop
@@ -81,29 +90,53 @@ const PongPage = () => {
       // Clear canvas
       ctx.clearRect(0, 0, width, height)
       
-      // Draw background
-      ctx.fillStyle = theme === 'dark' ? '#1E293B' : '#F3F4F6'
+      // Draw background with gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, height)
+      gradient.addColorStop(0, theme === 'dark' ? '#1e293b' : '#f8fafc')
+      gradient.addColorStop(1, theme === 'dark' ? '#0f172a' : '#e2e8f0')
+      ctx.fillStyle = gradient
       ctx.fillRect(0, 0, width, height)
       
       // Draw center line
       ctx.beginPath()
-      ctx.setLineDash([5, 5])
+      ctx.setLineDash([10, 10])
       ctx.moveTo(width / 2, 0)
       ctx.lineTo(width / 2, height)
-      ctx.strokeStyle = theme === 'dark' ? '#64748B' : '#9CA3AF'
+      ctx.strokeStyle = theme === 'dark' ? '#64748b' : '#94a3b8'
+      ctx.lineWidth = 3
       ctx.stroke()
       ctx.setLineDash([])
       
-      // Draw paddles
-      ctx.fillStyle = theme === 'dark' ? '#F0F9FF' : '#0C4A6E'
-      ctx.fillRect(0, playerY, paddleWidth, paddleHeight)
-      ctx.fillRect(width - paddleWidth, aiY, paddleWidth, paddleHeight)
+      // Draw paddles with gradients
+      const playerGradient = ctx.createLinearGradient(0, playerY, 0, playerY + paddleHeight)
+      playerGradient.addColorStop(0, '#3b82f6')
+      playerGradient.addColorStop(1, '#1d4ed8')
+      ctx.fillStyle = playerGradient
+      ctx.fillRect(10, playerY, paddleWidth, paddleHeight)
       
-      // Draw ball
+      const aiGradient = ctx.createLinearGradient(0, aiY, 0, aiY + paddleHeight)
+      aiGradient.addColorStop(0, '#ef4444')
+      aiGradient.addColorStop(1, '#dc2626')
+      ctx.fillStyle = aiGradient
+      ctx.fillRect(width - paddleWidth - 10, aiY, paddleWidth, paddleHeight)
+      
+      // Draw ball with glow effect
+      const ballGradient = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballRadius)
+      ballGradient.addColorStop(0, '#ffffff')
+      ballGradient.addColorStop(1, theme === 'dark' ? '#e2e8f0' : '#64748b')
+      
       ctx.beginPath()
       ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2)
-      ctx.fillStyle = theme === 'dark' ? '#F0F9FF' : '#0C4A6E'
+      ctx.fillStyle = ballGradient
       ctx.fill()
+      
+      // Add glow effect
+      ctx.shadowColor = theme === 'dark' ? '#ffffff' : '#64748b'
+      ctx.shadowBlur = 10
+      ctx.beginPath()
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
       
       // Move ball
       ballX += ballSpeedX
@@ -114,95 +147,105 @@ const PongPage = () => {
         ballSpeedY = -ballSpeedY
       }
       
-      // Ball collision with paddles
+      // Ball collision with player paddle
       if (
-        ballX - ballRadius < paddleWidth && 
+        ballX - ballRadius < 10 + paddleWidth && 
         ballY > playerY && 
-        ballY < playerY + paddleHeight
+        ballY < playerY + paddleHeight &&
+        ballSpeedX < 0
       ) {
         ballSpeedX = -ballSpeedX
-        
-        // Add some angle based on where the ball hits the paddle
         const hitPosition = (ballY - playerY) / paddleHeight
-        ballSpeedY = 10 * (hitPosition - 0.5)
+        ballSpeedY = 12 * (hitPosition - 0.5)
+        
+        // Increase speed slightly
+        ballSpeedX *= 1.05
+        ballSpeedY *= 1.05
       }
       
+      // Ball collision with AI paddle
       if (
-        ballX + ballRadius > width - paddleWidth && 
+        ballX + ballRadius > width - paddleWidth - 10 && 
         ballY > aiY && 
-        ballY < aiY + paddleHeight
+        ballY < aiY + paddleHeight &&
+        ballSpeedX > 0
       ) {
         ballSpeedX = -ballSpeedX
-        
-        // Add some angle based on where the ball hits the paddle
         const hitPosition = (ballY - aiY) / paddleHeight
-        ballSpeedY = 10 * (hitPosition - 0.5)
+        ballSpeedY = 12 * (hitPosition - 0.5)
+        
+        // Increase speed slightly
+        ballSpeedX *= 1.05
+        ballSpeedY *= 1.05
       }
       
-      // AI movement
+      // Advanced AI movement with prediction
+      const predictedBallY = ballY + (ballSpeedY * ((width - ballX) / Math.abs(ballSpeedX)))
+      const targetY = predictedBallY * aiPrediction + ballY * (1 - aiPrediction)
       const aiCenter = aiY + paddleHeight / 2
-      if (aiCenter < ballY - 10) {
+      
+      if (aiCenter < targetY - 15) {
         aiY += aiSpeed
-      } else if (aiCenter > ballY + 10) {
+      } else if (aiCenter > targetY + 15) {
         aiY -= aiSpeed
       }
       
-      // Keep AI paddle within canvas
-      if (aiY < 0) {
-        aiY = 0
-      } else if (aiY + paddleHeight > height) {
-        aiY = height - paddleHeight
-      }
+      // Keep AI paddle within bounds
+      if (aiY < 0) aiY = 0
+      if (aiY + paddleHeight > height) aiY = height - paddleHeight
       
       // Scoring
       if (ballX - ballRadius < 0) {
-        // AI scores
         setScore(prevScore => {
           const newScore = { ...prevScore, ai: prevScore.ai + 1 }
-          
-          // Check for game over
-          if (newScore.ai >= 5) {
+          if (newScore.ai >= 7) {
             setGameOver(true)
             setWinner('AI')
           }
-          
           return newScore
         })
         
         // Reset ball
         ballX = width / 2
         ballY = height / 2
-        ballSpeedX = -5
-        ballSpeedY = 3
+        ballSpeedX = 6
+        ballSpeedY = 4
       }
       
       if (ballX + ballRadius > width) {
-        // Player scores
         setScore(prevScore => {
           const newScore = { ...prevScore, player: prevScore.player + 1 }
-          
-          // Check for game over
-          if (newScore.player >= 5) {
+          if (newScore.player >= 7) {
             setGameOver(true)
             setWinner('Player')
           }
-          
           return newScore
         })
         
         // Reset ball
         ballX = width / 2
         ballY = height / 2
-        ballSpeedX = 5
-        ballSpeedY = 3
+        ballSpeedX = -6
+        ballSpeedY = 4
       }
       
-      // Draw scores
-      ctx.font = '24px Arial'
-      ctx.fillStyle = theme === 'dark' ? '#F0F9FF' : '#0C4A6E'
+      // Draw scores with glow effect
+      ctx.font = 'bold 36px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText(score.player.toString(), width / 4, 30)
-      ctx.fillText(score.ai.toString(), 3 * width / 4, 30)
+      
+      // Player score
+      ctx.fillStyle = '#3b82f6'
+      ctx.shadowColor = '#3b82f6'
+      ctx.shadowBlur = 10
+      ctx.fillText(score.player.toString(), width / 4, 60)
+      
+      // AI score
+      ctx.fillStyle = '#ef4444'
+      ctx.shadowColor = '#ef4444'
+      ctx.shadowBlur = 10
+      ctx.fillText(score.ai.toString(), 3 * width / 4, 60)
+      
+      ctx.shadowBlur = 0
       
     }, 1000 / 60) // 60 FPS
     
@@ -211,115 +254,136 @@ const PongPage = () => {
       canvas.removeEventListener('mousemove', handleMouseMove)
       canvas.removeEventListener('touchmove', handleTouchMove)
     }
-  }, [gameStarted, theme, difficulty])
+  }, [gameStarted, theme, difficulty, score])
 
   const startGame = () => {
     setGameStarted(true)
     setScore({ player: 0, ai: 0 })
     setGameOver(false)
     setWinner(null)
+    setShowResultModal(false)
   }
 
-  const restartGame = () => {
+  const resetGame = () => {
     setGameStarted(false)
-    setTimeout(startGame, 10)
-  }
-
-  if (!gameStarted || gameOver) {
-    return (
-      <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} min-h-screen py-12 theme-transition`}>
-        <div className="container mx-auto px-4">
-          <div className="max-w-md mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-8">Pong</h1>
-            
-            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-              {gameOver ? (
-                <>
-                  <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
-                  <p className="text-xl mb-6">{winner} wins with a score of {winner === 'Player' ? score.player : score.ai}!</p>
-                  <button
-                    onClick={restartGame}
-                    className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-                  >
-                    Play Again
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-xl font-semibold mb-6">Select Difficulty</h2>
-                  
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <button
-                      onClick={() => setDifficulty('easy')}
-                      className={`py-2 px-4 font-medium rounded-lg transition-colors ${
-                        difficulty === 'easy'
-                          ? 'bg-primary-600 text-white'
-                          : `${theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-gray-300`
-                      }`}
-                    >
-                      Easy
-                    </button>
-                    
-                    <button
-                      onClick={() => setDifficulty('medium')}
-                      className={`py-2 px-4 font-medium rounded-lg transition-colors ${
-                        difficulty === 'medium'
-                          ? 'bg-primary-600 text-white'
-                          : `${theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-gray-300`
-                      }`}
-                    >
-                      Medium
-                    </button>
-                    
-                    <button
-                      onClick={() => setDifficulty('hard')}
-                      className={`py-2 px-4 font-medium rounded-lg transition-colors ${
-                        difficulty === 'hard'
-                          ? 'bg-primary-600 text-white'
-                          : `${theme === 'dark' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-800'} hover:bg-gray-300`
-                      }`}
-                    >
-                      Hard
-                    </button>
-                  </div>
-                  
-                  <button
-                    onClick={startGame}
-                    className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-                  >
-                    Start Game
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    setTimeout(startGame, 100)
   }
 
   return (
-    <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} min-h-screen py-12 theme-transition`}>
-      <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-8">Pong</h1>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} relative overflow-hidden`}>
+      <div className="animated-bg"></div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto text-center"
+        >
+          <h1 className="text-4xl font-bold font-orbitron mb-8"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.5))',
+              }}>
+            <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+              Pong
+            </span>
+          </h1>
           
-          <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-            <canvas 
-              ref={canvasRef} 
-              width={600} 
-              height={400} 
-              className={`border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'} mx-auto`}
-            />
-            
-            <div className="mt-6">
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                Move your mouse up and down to control the left paddle. First to 5 points wins!
-              </p>
-            </div>
+          <div className={`${theme === 'dark' ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl shadow-2xl p-6 border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            {!gameStarted ? (
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-6">Select Difficulty</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 max-w-md mx-auto">
+                  {['easy', 'medium', 'hard'].map((level) => (
+                    <motion.button
+                      key={level}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setDifficulty(level)}
+                      className={`py-3 px-4 font-medium rounded-lg transition-all duration-300 ${
+                        difficulty === level
+                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                          : `${theme === 'dark' ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+                      }`}
+                    >
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
+                    </motion.button>
+                  ))}
+                </div>
+                
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  First to 7 points wins! Move your mouse or finger to control your paddle.
+                </p>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={startGame}
+                  className="py-3 px-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold font-orbitron rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/25"
+                >
+                  Start Game
+                </motion.button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <div className="text-lg font-bold mb-2">
+                    Player {score.player} - {score.ai} AI
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    First to 7 wins • Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                  </div>
+                </div>
+                
+                <div className="relative overflow-hidden rounded-xl border-2 border-gray-300 dark:border-gray-600 mx-auto" style={{ width: 'fit-content' }}>
+                  <canvas 
+                    ref={canvasRef} 
+                    width={800} 
+                    height={400} 
+                    className="block max-w-full h-auto"
+                  />
+                </div>
+                
+                <div className="mt-6 flex gap-4 justify-center flex-wrap">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={resetGame}
+                    className="py-2 px-6 bg-gradient-to-r from-green-600 to-teal-600 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    New Game
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setGameStarted(false)}
+                    className="py-2 px-6 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    Change Difficulty
+                  </motion.button>
+                </div>
+                
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Move your mouse or finger up and down to control your paddle (blue).
+                  </p>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </motion.div>
       </div>
+
+      <GameResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        result={winner === 'Player' ? 'win' : 'lose'}
+        message={winner === 'Player' ? 'Congratulations! You won!' : 'AI wins! Try again!'}
+        onRestart={resetGame}
+        showScore={false}
+      />
     </div>
   )
 }

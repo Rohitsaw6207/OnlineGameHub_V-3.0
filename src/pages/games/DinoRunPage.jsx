@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext'
+import { motion } from 'framer-motion'
+import GameResultModal from '../../components/common/GameResultModal'
 
 const DinoRunPage = () => {
   const { theme } = useTheme()
@@ -7,6 +9,7 @@ const DinoRunPage = () => {
   const [gameStarted, setGameStarted] = useState(false)
   const [score, setScore] = useState(0)
   const [gameOver, setGameOver] = useState(false)
+  const [showResultModal, setShowResultModal] = useState(false)
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('dinoRunHighScore')
     return saved ? parseInt(saved, 10) : 0
@@ -24,6 +27,12 @@ const DinoRunPage = () => {
   }, [score, highScore])
 
   useEffect(() => {
+    if (gameOver) {
+      setShowResultModal(true)
+    }
+  }, [gameOver])
+
+  useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !gameStarted) return
     
@@ -32,37 +41,46 @@ const DinoRunPage = () => {
     const height = canvas.height
     
     // Game settings
-    const groundY = height - 50
-    let gameSpeed = 6
-    const gravity = 0.9
+    const groundY = height - 80
+    let gameSpeed = 8
+    const gravity = 1.2
     let spawnTimer = 0
-    const obstacleInterval = 100
+    const obstacleInterval = 80
     
     // Dino properties
-    const dinoWidth = 50
-    const dinoHeight = 60
-    let dinoX = 50
+    const dinoWidth = 60
+    const dinoHeight = 70
+    let dinoX = 80
     let dinoY = groundY - dinoHeight
     let dinoVelocityY = 0
     let jumping = false
     let ducking = false
+    let animationFrame = 0
     
-    // Obstacles
+    // Obstacles and environment
     const obstacles = []
-    const birdY = groundY - 80 // Flying birds are higher than cacti
-    
-    // Clouds and background
     const clouds = []
+    const cacti = []
     
-    // Jump handler
+    // Initialize clouds
+    for (let i = 0; i < 4; i++) {
+      clouds.push({
+        x: Math.random() * width,
+        y: Math.random() * (height / 3),
+        width: 60 + Math.random() * 40,
+        height: 30,
+        speed: 1 + Math.random() * 2
+      })
+    }
+    
+    // Input handlers
     const handleJump = () => {
       if (!jumping && !gameOver) {
         jumping = true
-        dinoVelocityY = -20
+        dinoVelocityY = -22
       }
     }
     
-    // Duck handler
     const handleDuckStart = () => {
       if (!jumping && !gameOver) {
         ducking = true
@@ -73,133 +91,210 @@ const DinoRunPage = () => {
       ducking = false
     }
     
-    // Input handlers
     const handleKeyDown = (e) => {
       if ((e.code === 'Space' || e.code === 'ArrowUp') && !jumping) {
+        e.preventDefault()
         handleJump()
       } else if (e.code === 'ArrowDown') {
+        e.preventDefault()
         handleDuckStart()
       }
     }
     
     const handleKeyUp = (e) => {
       if (e.code === 'ArrowDown') {
+        e.preventDefault()
         handleDuckEnd()
       }
     }
     
-    // Touch and click handlers
     const handleTouchStart = (e) => {
       e.preventDefault()
-      handleJump()
+      if (e.touches.length === 1) {
+        handleJump()
+      }
+    }
+    
+    const handleTouchEnd = (e) => {
+      e.preventDefault()
+      handleDuckEnd()
     }
     
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
-    canvas.addEventListener('click', handleJump)
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
-    
-    // Create a cloud
-    const createCloud = () => {
-      clouds.push({
-        x: width,
-        y: Math.random() * (height / 2),
-        width: 60 + Math.random() * 40,
-        height: 30,
-        speed: 1 + Math.random() * 2
-      })
-    }
-    
-    // Initial clouds
-    for (let i = 0; i < 3; i++) {
-      createCloud()
-      clouds[i].x = Math.random() * width
-    }
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
     
     // Spawn obstacles
     const spawnObstacle = () => {
-      const type = Math.random() > 0.7 ? 'bird' : 'cactus'
-      const obstacleHeight = type === 'bird' ? 30 : 50 + Math.random() * 30
-      const obstacleWidth = 30
+      const types = ['cactus', 'bird', 'rock']
+      const type = types[Math.floor(Math.random() * types.length)]
+      
+      let obstacleHeight, obstacleWidth, obstacleY
+      
+      switch (type) {
+        case 'cactus':
+          obstacleHeight = 50 + Math.random() * 30
+          obstacleWidth = 25 + Math.random() * 15
+          obstacleY = groundY - obstacleHeight
+          break
+        case 'bird':
+          obstacleHeight = 30
+          obstacleWidth = 40
+          obstacleY = groundY - 120 - Math.random() * 50
+          break
+        case 'rock':
+          obstacleHeight = 35
+          obstacleWidth = 35
+          obstacleY = groundY - obstacleHeight
+          break
+      }
       
       obstacles.push({
         x: width,
-        y: type === 'bird' ? birdY : groundY - obstacleHeight,
+        y: obstacleY,
         width: obstacleWidth,
         height: obstacleHeight,
-        type
+        type,
+        animFrame: 0
       })
     }
     
     // Check collision
     const checkCollision = (obstacle) => {
-      // Get current dino dimensions (smaller when ducking)
       const currentDinoHeight = ducking ? dinoHeight / 2 : dinoHeight
       const currentDinoY = ducking ? dinoY + dinoHeight / 2 : dinoY
+      const currentDinoWidth = ducking ? dinoWidth * 1.2 : dinoWidth
       
       return (
-        dinoX < obstacle.x + obstacle.width &&
-        dinoX + dinoWidth > obstacle.x &&
-        currentDinoY < obstacle.y + obstacle.height &&
-        currentDinoY + currentDinoHeight > obstacle.y
+        dinoX < obstacle.x + obstacle.width - 10 &&
+        dinoX + currentDinoWidth > obstacle.x + 10 &&
+        currentDinoY < obstacle.y + obstacle.height - 5 &&
+        currentDinoY + currentDinoHeight > obstacle.y + 5
       )
     }
     
-    // Draw the dino
+    // Draw functions
     const drawDino = () => {
-      ctx.fillStyle = theme === 'dark' ? '#4ADE80' : '#166534'
+      animationFrame++
+      
+      ctx.fillStyle = theme === 'dark' ? '#4ade80' : '#22c55e'
       
       if (ducking) {
-        // Draw a ducking dino (smaller height, longer width)
+        // Ducking dino
         ctx.fillRect(dinoX, dinoY + dinoHeight / 2, dinoWidth * 1.2, dinoHeight / 2)
+        
+        // Head
+        ctx.fillRect(dinoX + dinoWidth * 0.8, dinoY + dinoHeight / 2, dinoWidth * 0.4, dinoHeight * 0.3)
       } else {
-        // Draw a standing dino
-        ctx.fillRect(dinoX, dinoY, dinoWidth, dinoHeight)
+        // Standing/jumping dino body
+        ctx.fillRect(dinoX, dinoY, dinoWidth * 0.8, dinoHeight)
         
-        // Draw eyes
-        ctx.fillStyle = theme === 'dark' ? '#FFFFFF' : '#000000'
-        ctx.fillRect(dinoX + 35, dinoY + 10, 8, 8)
+        // Head
+        ctx.fillRect(dinoX + dinoWidth * 0.6, dinoY, dinoWidth * 0.4, dinoHeight * 0.4)
+        
+        // Tail
+        ctx.fillRect(dinoX - dinoWidth * 0.2, dinoY + dinoHeight * 0.3, dinoWidth * 0.3, dinoHeight * 0.2)
+        
+        // Legs (animated when running)
+        if (!jumping && Math.floor(animationFrame / 10) % 2) {
+          ctx.fillRect(dinoX + dinoWidth * 0.2, dinoY + dinoHeight * 0.8, dinoWidth * 0.15, dinoHeight * 0.2)
+          ctx.fillRect(dinoX + dinoWidth * 0.5, dinoY + dinoHeight * 0.7, dinoWidth * 0.15, dinoHeight * 0.3)
+        } else if (!jumping) {
+          ctx.fillRect(dinoX + dinoWidth * 0.2, dinoY + dinoHeight * 0.7, dinoWidth * 0.15, dinoHeight * 0.3)
+          ctx.fillRect(dinoX + dinoWidth * 0.5, dinoY + dinoHeight * 0.8, dinoWidth * 0.15, dinoHeight * 0.2)
+        }
       }
-    }
-    
-    // Draw obstacle
-    const drawObstacle = (obstacle) => {
-      if (obstacle.type === 'cactus') {
-        ctx.fillStyle = theme === 'dark' ? '#4ADE80' : '#166534'
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height)
-      } else if (obstacle.type === 'bird') {
-        ctx.fillStyle = theme === 'dark' ? '#93C5FD' : '#1E40AF'
-        
-        // Bird body
-        ctx.beginPath()
-        ctx.ellipse(
-          obstacle.x + obstacle.width / 2,
-          obstacle.y + obstacle.height / 2,
-          obstacle.width / 2,
-          obstacle.height / 2,
-          0, 0, Math.PI * 2
-        )
-        ctx.fill()
-        
-        // Wings (flapping)
-        const wingOffset = Math.sin(Date.now() / 100) * 10
-        ctx.beginPath()
-        ctx.ellipse(
-          obstacle.x + obstacle.width / 2,
-          obstacle.y - 5 + wingOffset,
-          obstacle.width / 3,
-          obstacle.height / 4,
-          0, 0, Math.PI * 2
-        )
-        ctx.fill()
-      }
-    }
-    
-    // Draw cloud
-    const drawCloud = (cloud) => {
-      ctx.fillStyle = theme === 'dark' ? '#94A3B8' : '#F1F5F9'
       
-      // Draw a fluffy cloud with multiple circles
+      // Eyes
+      ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'
+      if (!ducking) {
+        ctx.fillRect(dinoX + dinoWidth * 0.7, dinoY + dinoHeight * 0.1, 6, 6)
+      } else {
+        ctx.fillRect(dinoX + dinoWidth * 0.9, dinoY + dinoHeight * 0.55, 6, 6)
+      }
+    }
+    
+    const drawObstacle = (obstacle) => {
+      obstacle.animFrame++
+      
+      switch (obstacle.type) {
+        case 'cactus':
+          // Draw cactus with segments
+          ctx.fillStyle = theme === 'dark' ? '#22c55e' : '#16a34a'
+          ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height)
+          
+          // Cactus arms
+          if (obstacle.width > 30) {
+            ctx.fillRect(obstacle.x - 10, obstacle.y + obstacle.height * 0.3, 15, obstacle.height * 0.4)
+            ctx.fillRect(obstacle.x + obstacle.width - 5, obstacle.y + obstacle.height * 0.5, 15, obstacle.height * 0.3)
+          }
+          
+          // Spikes
+          ctx.fillStyle = theme === 'dark' ? '#16a34a' : '#15803d'
+          for (let i = 0; i < obstacle.height; i += 10) {
+            ctx.fillRect(obstacle.x - 2, obstacle.y + i, 4, 6)
+            ctx.fillRect(obstacle.x + obstacle.width - 2, obstacle.y + i, 4, 6)
+          }
+          break
+          
+        case 'bird':
+          // Animated bird
+          ctx.fillStyle = theme === 'dark' ? '#60a5fa' : '#3b82f6'
+          
+          // Body
+          ctx.beginPath()
+          ctx.ellipse(
+            obstacle.x + obstacle.width / 2,
+            obstacle.y + obstacle.height / 2,
+            obstacle.width / 2,
+            obstacle.height / 2,
+            0, 0, Math.PI * 2
+          )
+          ctx.fill()
+          
+          // Wings (flapping animation)
+          const wingOffset = Math.sin(obstacle.animFrame / 5) * 8
+          ctx.beginPath()
+          ctx.ellipse(
+            obstacle.x + obstacle.width / 2,
+            obstacle.y + wingOffset,
+            obstacle.width / 3,
+            obstacle.height / 4,
+            0, 0, Math.PI * 2
+          )
+          ctx.fill()
+          
+          // Beak
+          ctx.fillStyle = '#f59e0b'
+          ctx.fillRect(obstacle.x + obstacle.width - 5, obstacle.y + obstacle.height / 2 - 2, 8, 4)
+          break
+          
+        case 'rock':
+          // Draw rock
+          ctx.fillStyle = theme === 'dark' ? '#6b7280' : '#4b5563'
+          ctx.beginPath()
+          ctx.ellipse(
+            obstacle.x + obstacle.width / 2,
+            obstacle.y + obstacle.height / 2,
+            obstacle.width / 2,
+            obstacle.height / 2,
+            0, 0, Math.PI * 2
+          )
+          ctx.fill()
+          
+          // Rock texture
+          ctx.fillStyle = theme === 'dark' ? '#9ca3af' : '#6b7280'
+          ctx.fillRect(obstacle.x + 5, obstacle.y + 5, 8, 8)
+          ctx.fillRect(obstacle.x + obstacle.width - 10, obstacle.y + 10, 6, 6)
+          break
+      }
+    }
+    
+    const drawCloud = (cloud) => {
+      ctx.fillStyle = theme === 'dark' ? '#64748b' : '#e2e8f0'
+      
+      // Draw fluffy cloud
       const centerX = cloud.x + cloud.width / 2
       const centerY = cloud.y + cloud.height / 2
       
@@ -212,17 +307,36 @@ const DinoRunPage = () => {
       ctx.fill()
     }
     
-    // Draw ground
     const drawGround = () => {
-      ctx.fillStyle = theme === 'dark' ? '#475569' : '#D1D5DB'
+      // Ground
+      ctx.fillStyle = theme === 'dark' ? '#374151' : '#d1d5db'
       ctx.fillRect(0, groundY, width, height - groundY)
       
-      // Draw a line at the top of the ground
-      ctx.strokeStyle = theme === 'dark' ? '#64748B' : '#9CA3AF'
+      // Ground line
+      ctx.strokeStyle = theme === 'dark' ? '#4b5563' : '#9ca3af'
+      ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(0, groundY)
       ctx.lineTo(width, groundY)
       ctx.stroke()
+      
+      // Ground details (moving)
+      ctx.fillStyle = theme === 'dark' ? '#4b5563' : '#9ca3af'
+      const groundOffset = (Date.now() * gameSpeed / 100) % 40
+      for (let i = -groundOffset; i < width; i += 40) {
+        ctx.fillRect(i, groundY + 10, 20, 3)
+        ctx.fillRect(i + 25, groundY + 20, 10, 2)
+      }
+    }
+    
+    const drawUI = () => {
+      ctx.font = 'bold 24px Arial'
+      ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'
+      ctx.textAlign = 'right'
+      ctx.fillText(`Score: ${score}`, width - 20, 40)
+      
+      ctx.textAlign = 'left'
+      ctx.fillText(`High: ${highScore}`, 20, 40)
     }
     
     // Game loop
@@ -232,24 +346,24 @@ const DinoRunPage = () => {
       // Clear canvas
       ctx.clearRect(0, 0, width, height)
       
-      // Draw background
-      ctx.fillStyle = theme === 'dark' ? '#0F172A' : '#F0F9FF'
+      // Draw background gradient
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
+      bgGradient.addColorStop(0, theme === 'dark' ? '#0f172a' : '#f0f9ff')
+      bgGradient.addColorStop(1, theme === 'dark' ? '#1e293b' : '#e0f2fe')
+      ctx.fillStyle = bgGradient
       ctx.fillRect(0, 0, width, height)
       
       // Update and draw clouds
-      for (let i = 0; i < clouds.length; i++) {
-        clouds[i].x -= clouds[i].speed
-        
-        // Respawn cloud if it goes off screen
-        if (clouds[i].x + clouds[i].width < 0) {
-          clouds[i].x = width
-          clouds[i].y = Math.random() * (height / 2)
+      clouds.forEach(cloud => {
+        cloud.x -= cloud.speed
+        if (cloud.x + cloud.width < 0) {
+          cloud.x = width
+          cloud.y = Math.random() * (height / 3)
         }
-        
-        drawCloud(clouds[i])
-      }
+        drawCloud(cloud)
+      })
       
-      // Update ground
+      // Draw ground
       drawGround()
       
       // Update dino
@@ -291,23 +405,19 @@ const DinoRunPage = () => {
         }
       }
       
-      // Increase score
+      // Increase score and speed
       setScore(prevScore => {
         const newScore = prevScore + 1
         
         // Increase game speed every 500 points
         if (newScore % 500 === 0) {
-          gameSpeed += 0.5
+          gameSpeed += 1
         }
         
         return newScore
       })
       
-      // Draw score
-      ctx.font = 'bold 20px Arial'
-      ctx.fillStyle = theme === 'dark' ? '#FFFFFF' : '#000000'
-      ctx.textAlign = 'right'
-      ctx.fillText(`Score: ${score}`, width - 20, 30)
+      drawUI()
       
     }, 1000 / 60) // 60 FPS
     
@@ -315,96 +425,142 @@ const DinoRunPage = () => {
       clearInterval(gameLoop)
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
-      canvas.removeEventListener('click', handleJump)
       canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [gameStarted, gameOver, theme])
+  }, [gameStarted, gameOver, theme, highScore])
 
   const startGame = () => {
     setGameStarted(true)
     setScore(0)
     setGameOver(false)
+    setShowResultModal(false)
   }
 
-  if (gameOver) {
-    return (
-      <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} min-h-screen py-12 theme-transition`}>
-        <div className="container mx-auto px-4">
-          <div className="max-w-md mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-8">Dino Run</h1>
-            
-            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-              <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
-              <p className="text-xl mb-2">Your Score: {score}</p>
-              <p className="text-lg mb-6">High Score: {highScore}</p>
-              
-              <button
-                onClick={startGame}
-                className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-              >
-                Play Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!gameStarted) {
-    return (
-      <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} min-h-screen py-12 theme-transition`}>
-        <div className="container mx-auto px-4">
-          <div className="max-w-md mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-8">Dino Run</h1>
-            
-            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-              <h2 className="text-xl font-semibold mb-4">How to Play</h2>
-              <p className="mb-6">
-                Press Space or Up Arrow to jump over obstacles. Press Down Arrow to duck under flying birds.
-                Try to survive as long as possible!
-              </p>
-              
-              <div className="mb-6">
-                <p className="text-lg font-semibold">High Score: {highScore}</p>
-              </div>
-              
-              <button
-                onClick={startGame}
-                className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-              >
-                Start Game
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  const resetGame = () => {
+    startGame()
   }
 
   return (
-    <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} min-h-screen py-12 theme-transition`}>
-      <div className="container mx-auto px-4">
-        <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-3xl font-bold mb-8">Dino Run</h1>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} relative overflow-hidden`}>
+      <div className="animated-bg"></div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto text-center"
+        >
+          <h1 className="text-4xl font-bold font-orbitron mb-8"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.5))',
+              }}>
+            <span className="bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">
+              Dino Run
+            </span>
+          </h1>
           
-          <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-6`}>
-            <canvas 
-              ref={canvasRef} 
-              width={600} 
-              height={300} 
-              className={`border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'} mx-auto`}
-            />
-            
-            <div className="mt-6">
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                Press Space or Up Arrow to jump. Press Down Arrow to duck.
-                You can also tap/click on the game to jump.
-              </p>
-            </div>
+          <div className={`${theme === 'dark' ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl shadow-2xl p-6 border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            {!gameStarted ? (
+              <div className="text-center">
+                <div className="mb-6">
+                  <p className="text-lg mb-4">
+                    Help the dino jump over obstacles and survive as long as possible!
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Press Space or Up Arrow to jump. Down Arrow to duck. Tap to jump on mobile.
+                  </p>
+                  <p className="text-lg font-semibold">High Score: {highScore}</p>
+                </div>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={startGame}
+                  className="py-3 px-8 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold font-orbitron rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/25"
+                >
+                  Start Running
+                </motion.button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
+                  <div className="text-xl font-bold font-orbitron">Score: {score}</div>
+                  <div className="text-lg">High Score: {highScore}</div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={resetGame}
+                    className="py-2 px-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    Restart
+                  </motion.button>
+                </div>
+                
+                <div className="relative overflow-hidden rounded-xl border-2 border-gray-300 dark:border-gray-600 mx-auto" style={{ width: 'fit-content' }}>
+                  <canvas 
+                    ref={canvasRef} 
+                    width={900} 
+                    height={400} 
+                    className="block max-w-full h-auto"
+                  />
+                </div>
+                
+                {/* Mobile Controls */}
+                <div className="mt-6 flex gap-4 justify-center md:hidden">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onTouchStart={(e) => {
+                      e.preventDefault()
+                      // Trigger jump
+                      const event = new KeyboardEvent('keydown', { code: 'Space' })
+                      window.dispatchEvent(event)
+                    }}
+                    className="py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg"
+                  >
+                    Jump
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onTouchStart={(e) => {
+                      e.preventDefault()
+                      const event = new KeyboardEvent('keydown', { code: 'ArrowDown' })
+                      window.dispatchEvent(event)
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault()
+                      const event = new KeyboardEvent('keyup', { code: 'ArrowDown' })
+                      window.dispatchEvent(event)
+                    }}
+                    className="py-3 px-6 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-lg"
+                  >
+                    Duck
+                  </motion.button>
+                </div>
+                
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Press Space or Up Arrow to jump. Down Arrow to duck. Game speed increases over time!
+                  </p>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </motion.div>
       </div>
+
+      <GameResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        result="lose"
+        score={score}
+        message={`Game Over! You survived ${score} points.`}
+        onRestart={resetGame}
+      />
     </div>
   )
 }
