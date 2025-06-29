@@ -66,4 +66,18 @@ If you wish to collaborate, contribute, or learn from this project, feel free to
 
 📧 Contact: [rohitku6207@gmail.com](mailto:rohitku6207@gmail.com)
 
+---
+
+## 🧑‍💻 Author
+
+- **Rohit Kumar Saw**  
+- 📧 [rohitku6207@gmail.com](mailto:rohitku6207@gmail.com)  
+- 🔗 [LinkedIn](https://www.linkedin.com/in/rohit-kumar-saw6207/)  
+- 💻 [GitHub](https://github.com/Rohitsaw6207)
+
+---
+
+## ⭐ Support
+
+If you like this project, consider starring ⭐ the repository to support and inspire more work!
 
