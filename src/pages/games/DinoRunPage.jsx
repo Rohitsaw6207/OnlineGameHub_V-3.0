@@ -41,16 +41,16 @@ const DinoRunPage = () => {
     const height = canvas.height
     
     // Game settings
-    const groundY = height - 80
-    let gameSpeed = 8
-    const gravity = 1.2
+    const groundY = height - 100
+    let gameSpeed = 6
+    const gravity = 1.0
     let spawnTimer = 0
-    const obstacleInterval = 80
+    const obstacleInterval = 90
     
     // Dino properties
     const dinoWidth = 60
     const dinoHeight = 70
-    let dinoX = 80
+    let dinoX = 100
     let dinoY = groundY - dinoHeight
     let dinoVelocityY = 0
     let jumping = false
@@ -60,16 +60,27 @@ const DinoRunPage = () => {
     // Obstacles and environment
     const obstacles = []
     const clouds = []
-    const cacti = []
+    const stars = []
     
     // Initialize clouds
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       clouds.push({
         x: Math.random() * width,
         y: Math.random() * (height / 3),
         width: 60 + Math.random() * 40,
         height: 30,
-        speed: 1 + Math.random() * 2
+        speed: 0.5 + Math.random() * 1
+      })
+    }
+    
+    // Initialize stars
+    for (let i = 0; i < 8; i++) {
+      stars.push({
+        x: Math.random() * width,
+        y: Math.random() * (height / 2),
+        size: 1 + Math.random() * 2,
+        speed: 0.2 + Math.random() * 0.5,
+        twinkle: Math.random() * Math.PI * 2
       })
     }
     
@@ -77,7 +88,7 @@ const DinoRunPage = () => {
     const handleJump = () => {
       if (!jumping && !gameOver) {
         jumping = true
-        dinoVelocityY = -22
+        dinoVelocityY = -20
       }
     }
     
@@ -115,15 +126,9 @@ const DinoRunPage = () => {
       }
     }
     
-    const handleTouchEnd = (e) => {
-      e.preventDefault()
-      handleDuckEnd()
-    }
-    
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
     
     // Spawn obstacles
     const spawnObstacle = () => {
@@ -160,32 +165,46 @@ const DinoRunPage = () => {
       })
     }
     
-    // Check collision
+    // Enhanced collision detection
     const checkCollision = (obstacle) => {
       const currentDinoHeight = ducking ? dinoHeight / 2 : dinoHeight
       const currentDinoY = ducking ? dinoY + dinoHeight / 2 : dinoY
       const currentDinoWidth = ducking ? dinoWidth * 1.2 : dinoWidth
       
+      // More precise collision detection
+      const dinoLeft = dinoX + 5
+      const dinoRight = dinoX + currentDinoWidth - 5
+      const dinoTop = currentDinoY + 5
+      const dinoBottom = currentDinoY + currentDinoHeight - 5
+      
+      const obstacleLeft = obstacle.x + 5
+      const obstacleRight = obstacle.x + obstacle.width - 5
+      const obstacleTop = obstacle.y + 5
+      const obstacleBottom = obstacle.y + obstacle.height - 5
+      
       return (
-        dinoX < obstacle.x + obstacle.width - 10 &&
-        dinoX + currentDinoWidth > obstacle.x + 10 &&
-        currentDinoY < obstacle.y + obstacle.height - 5 &&
-        currentDinoY + currentDinoHeight > obstacle.y + 5
+        dinoLeft < obstacleRight &&
+        dinoRight > obstacleLeft &&
+        dinoTop < obstacleBottom &&
+        dinoBottom > obstacleTop
       )
     }
     
-    // Draw functions
+    // Draw functions with enhanced graphics
     const drawDino = () => {
       animationFrame++
       
       ctx.fillStyle = theme === 'dark' ? '#4ade80' : '#22c55e'
       
       if (ducking) {
-        // Ducking dino
+        // Ducking dino with better proportions
         ctx.fillRect(dinoX, dinoY + dinoHeight / 2, dinoWidth * 1.2, dinoHeight / 2)
         
         // Head
         ctx.fillRect(dinoX + dinoWidth * 0.8, dinoY + dinoHeight / 2, dinoWidth * 0.4, dinoHeight * 0.3)
+        
+        // Tail
+        ctx.fillRect(dinoX - dinoWidth * 0.1, dinoY + dinoHeight * 0.7, dinoWidth * 0.2, dinoHeight * 0.15)
       } else {
         // Standing/jumping dino body
         ctx.fillRect(dinoX, dinoY, dinoWidth * 0.8, dinoHeight)
@@ -196,8 +215,8 @@ const DinoRunPage = () => {
         // Tail
         ctx.fillRect(dinoX - dinoWidth * 0.2, dinoY + dinoHeight * 0.3, dinoWidth * 0.3, dinoHeight * 0.2)
         
-        // Legs (animated when running)
-        if (!jumping && Math.floor(animationFrame / 10) % 2) {
+        // Animated legs when running
+        if (!jumping && Math.floor(animationFrame / 8) % 2) {
           ctx.fillRect(dinoX + dinoWidth * 0.2, dinoY + dinoHeight * 0.8, dinoWidth * 0.15, dinoHeight * 0.2)
           ctx.fillRect(dinoX + dinoWidth * 0.5, dinoY + dinoHeight * 0.7, dinoWidth * 0.15, dinoHeight * 0.3)
         } else if (!jumping) {
@@ -213,6 +232,13 @@ const DinoRunPage = () => {
       } else {
         ctx.fillRect(dinoX + dinoWidth * 0.9, dinoY + dinoHeight * 0.55, 6, 6)
       }
+      
+      // Add dino outline for better visibility
+      ctx.strokeStyle = theme === 'dark' ? '#16a34a' : '#15803d'
+      ctx.lineWidth = 2
+      ctx.strokeRect(dinoX, ducking ? dinoY + dinoHeight / 2 : dinoY, 
+                    ducking ? dinoWidth * 1.2 : dinoWidth * 0.8, 
+                    ducking ? dinoHeight / 2 : dinoHeight)
     }
     
     const drawObstacle = (obstacle) => {
@@ -220,29 +246,39 @@ const DinoRunPage = () => {
       
       switch (obstacle.type) {
         case 'cactus':
-          // Draw cactus with segments
-          ctx.fillStyle = theme === 'dark' ? '#22c55e' : '#16a34a'
+          // Enhanced cactus with segments and spikes
+          const cactusGradient = ctx.createLinearGradient(obstacle.x, obstacle.y, obstacle.x, obstacle.y + obstacle.height)
+          cactusGradient.addColorStop(0, theme === 'dark' ? '#22c55e' : '#16a34a')
+          cactusGradient.addColorStop(1, theme === 'dark' ? '#16a34a' : '#15803d')
+          
+          ctx.fillStyle = cactusGradient
           ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height)
           
-          // Cactus arms
+          // Cactus arms for larger cacti
           if (obstacle.width > 30) {
-            ctx.fillRect(obstacle.x - 10, obstacle.y + obstacle.height * 0.3, 15, obstacle.height * 0.4)
-            ctx.fillRect(obstacle.x + obstacle.width - 5, obstacle.y + obstacle.height * 0.5, 15, obstacle.height * 0.3)
+            ctx.fillRect(obstacle.x - 8, obstacle.y + obstacle.height * 0.3, 12, obstacle.height * 0.4)
+            ctx.fillRect(obstacle.x + obstacle.width - 4, obstacle.y + obstacle.height * 0.5, 12, obstacle.height * 0.3)
           }
           
           // Spikes
           ctx.fillStyle = theme === 'dark' ? '#16a34a' : '#15803d'
-          for (let i = 0; i < obstacle.height; i += 10) {
-            ctx.fillRect(obstacle.x - 2, obstacle.y + i, 4, 6)
-            ctx.fillRect(obstacle.x + obstacle.width - 2, obstacle.y + i, 4, 6)
+          for (let i = 0; i < obstacle.height; i += 8) {
+            ctx.fillRect(obstacle.x - 2, obstacle.y + i, 4, 4)
+            ctx.fillRect(obstacle.x + obstacle.width - 2, obstacle.y + i, 4, 4)
           }
           break
           
         case 'bird':
-          // Animated bird
-          ctx.fillStyle = theme === 'dark' ? '#60a5fa' : '#3b82f6'
+          // Enhanced animated bird
+          const birdGradient = ctx.createRadialGradient(
+            obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, 0,
+            obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.width / 2
+          )
+          birdGradient.addColorStop(0, theme === 'dark' ? '#60a5fa' : '#3b82f6')
+          birdGradient.addColorStop(1, theme === 'dark' ? '#3b82f6' : '#1d4ed8')
           
           // Body
+          ctx.fillStyle = birdGradient
           ctx.beginPath()
           ctx.ellipse(
             obstacle.x + obstacle.width / 2,
@@ -253,26 +289,44 @@ const DinoRunPage = () => {
           )
           ctx.fill()
           
-          // Wings (flapping animation)
-          const wingOffset = Math.sin(obstacle.animFrame / 5) * 8
+          // Wings with flapping animation
+          const wingOffset = Math.sin(obstacle.animFrame / 4) * 12
+          ctx.fillStyle = theme === 'dark' ? '#3b82f6' : '#1d4ed8'
           ctx.beginPath()
           ctx.ellipse(
             obstacle.x + obstacle.width / 2,
             obstacle.y + wingOffset,
             obstacle.width / 3,
-            obstacle.height / 4,
+            obstacle.height / 3,
             0, 0, Math.PI * 2
           )
           ctx.fill()
           
           // Beak
           ctx.fillStyle = '#f59e0b'
-          ctx.fillRect(obstacle.x + obstacle.width - 5, obstacle.y + obstacle.height / 2 - 2, 8, 4)
+          ctx.fillRect(obstacle.x + obstacle.width - 3, obstacle.y + obstacle.height / 2 - 2, 8, 4)
+          
+          // Eye
+          ctx.fillStyle = 'white'
+          ctx.beginPath()
+          ctx.arc(obstacle.x + obstacle.width / 2 + 5, obstacle.y + obstacle.height / 2 - 3, 3, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = 'black'
+          ctx.beginPath()
+          ctx.arc(obstacle.x + obstacle.width / 2 + 6, obstacle.y + obstacle.height / 2 - 2, 1, 0, Math.PI * 2)
+          ctx.fill()
           break
           
         case 'rock':
-          // Draw rock
-          ctx.fillStyle = theme === 'dark' ? '#6b7280' : '#4b5563'
+          // Enhanced rock with texture
+          const rockGradient = ctx.createRadialGradient(
+            obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, 0,
+            obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.width / 2
+          )
+          rockGradient.addColorStop(0, theme === 'dark' ? '#9ca3af' : '#6b7280')
+          rockGradient.addColorStop(1, theme === 'dark' ? '#6b7280' : '#4b5563')
+          
+          ctx.fillStyle = rockGradient
           ctx.beginPath()
           ctx.ellipse(
             obstacle.x + obstacle.width / 2,
@@ -283,10 +337,11 @@ const DinoRunPage = () => {
           )
           ctx.fill()
           
-          // Rock texture
-          ctx.fillStyle = theme === 'dark' ? '#9ca3af' : '#6b7280'
+          // Rock texture details
+          ctx.fillStyle = theme === 'dark' ? '#d1d5db' : '#9ca3af'
           ctx.fillRect(obstacle.x + 5, obstacle.y + 5, 8, 8)
           ctx.fillRect(obstacle.x + obstacle.width - 10, obstacle.y + 10, 6, 6)
+          ctx.fillRect(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height - 8, 4, 4)
           break
       }
     }
@@ -294,7 +349,7 @@ const DinoRunPage = () => {
     const drawCloud = (cloud) => {
       ctx.fillStyle = theme === 'dark' ? '#64748b' : '#e2e8f0'
       
-      // Draw fluffy cloud
+      // Draw fluffy cloud with multiple circles
       const centerX = cloud.x + cloud.width / 2
       const centerY = cloud.y + cloud.height / 2
       
@@ -307,36 +362,56 @@ const DinoRunPage = () => {
       ctx.fill()
     }
     
+    const drawStar = (star) => {
+      star.twinkle += 0.1
+      const alpha = 0.5 + Math.sin(star.twinkle) * 0.3
+      
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    
     const drawGround = () => {
-      // Ground
-      ctx.fillStyle = theme === 'dark' ? '#374151' : '#d1d5db'
+      // Enhanced ground with gradient
+      const groundGradient = ctx.createLinearGradient(0, groundY, 0, height)
+      groundGradient.addColorStop(0, theme === 'dark' ? '#374151' : '#d1d5db')
+      groundGradient.addColorStop(1, theme === 'dark' ? '#1f2937' : '#9ca3af')
+      
+      ctx.fillStyle = groundGradient
       ctx.fillRect(0, groundY, width, height - groundY)
       
       // Ground line
-      ctx.strokeStyle = theme === 'dark' ? '#4b5563' : '#9ca3af'
-      ctx.lineWidth = 2
+      ctx.strokeStyle = theme === 'dark' ? '#4b5563' : '#6b7280'
+      ctx.lineWidth = 3
       ctx.beginPath()
       ctx.moveTo(0, groundY)
       ctx.lineTo(width, groundY)
       ctx.stroke()
       
-      // Ground details (moving)
+      // Moving ground details
       ctx.fillStyle = theme === 'dark' ? '#4b5563' : '#9ca3af'
-      const groundOffset = (Date.now() * gameSpeed / 100) % 40
-      for (let i = -groundOffset; i < width; i += 40) {
-        ctx.fillRect(i, groundY + 10, 20, 3)
-        ctx.fillRect(i + 25, groundY + 20, 10, 2)
+      const groundOffset = (Date.now() * gameSpeed / 100) % 50
+      for (let i = -groundOffset; i < width; i += 50) {
+        ctx.fillRect(i, groundY + 15, 25, 4)
+        ctx.fillRect(i + 30, groundY + 25, 15, 3)
+        ctx.fillRect(i + 10, groundY + 35, 20, 2)
       }
     }
     
     const drawUI = () => {
       ctx.font = 'bold 24px Arial'
       ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'
-      ctx.textAlign = 'right'
-      ctx.fillText(`Score: ${score}`, width - 20, 40)
+      ctx.strokeStyle = theme === 'dark' ? '#000000' : '#ffffff'
+      ctx.lineWidth = 2
       
       ctx.textAlign = 'left'
-      ctx.fillText(`High: ${highScore}`, 20, 40)
+      ctx.strokeText(`Score: ${score}`, 20, 40)
+      ctx.fillText(`Score: ${score}`, 20, 40)
+      
+      ctx.textAlign = 'right'
+      ctx.strokeText(`High: ${highScore}`, width - 20, 40)
+      ctx.fillText(`High: ${highScore}`, width - 20, 40)
     }
     
     // Game loop
@@ -346,12 +421,23 @@ const DinoRunPage = () => {
       // Clear canvas
       ctx.clearRect(0, 0, width, height)
       
-      // Draw background gradient
+      // Draw beautiful gradient background
       const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
       bgGradient.addColorStop(0, theme === 'dark' ? '#0f172a' : '#f0f9ff')
-      bgGradient.addColorStop(1, theme === 'dark' ? '#1e293b' : '#e0f2fe')
+      bgGradient.addColorStop(0.7, theme === 'dark' ? '#1e293b' : '#e0f2fe')
+      bgGradient.addColorStop(1, theme === 'dark' ? '#334155' : '#bae6fd')
       ctx.fillStyle = bgGradient
       ctx.fillRect(0, 0, width, height)
+      
+      // Update and draw stars
+      stars.forEach(star => {
+        star.x -= star.speed
+        if (star.x < -10) {
+          star.x = width + 10
+          star.y = Math.random() * (height / 2)
+        }
+        drawStar(star)
+      })
       
       // Update and draw clouds
       clouds.forEach(cloud => {
@@ -398,24 +484,22 @@ const DinoRunPage = () => {
           return
         }
         
-        // Remove obstacles that go off screen
+        // Remove obstacles that go off screen and increase score
         if (obstacles[i].x + obstacles[i].width < 0) {
           obstacles.splice(i, 1)
           i--
+          setScore(prevScore => {
+            const newScore = prevScore + 1
+            
+            // Increase game speed every 100 points
+            if (newScore % 100 === 0) {
+              gameSpeed += 0.5
+            }
+            
+            return newScore
+          })
         }
       }
-      
-      // Increase score and speed
-      setScore(prevScore => {
-        const newScore = prevScore + 1
-        
-        // Increase game speed every 500 points
-        if (newScore % 500 === 0) {
-          gameSpeed += 1
-        }
-        
-        return newScore
-      })
       
       drawUI()
       
@@ -426,7 +510,6 @@ const DinoRunPage = () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
       canvas.removeEventListener('touchstart', handleTouchStart)
-      canvas.removeEventListener('touchend', handleTouchEnd)
     }
   }, [gameStarted, gameOver, theme, highScore])
 
@@ -471,7 +554,12 @@ const DinoRunPage = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Press Space or Up Arrow to jump. Down Arrow to duck. Tap to jump on mobile.
                   </p>
-                  <p className="text-lg font-semibold">High Score: {highScore}</p>
+                  <div className="flex justify-center items-center gap-4 mb-4">
+                    <div className={`px-4 py-2 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                      <span className="text-sm opacity-75">High Score</span>
+                      <div className="text-2xl font-bold font-orbitron text-green-500">{highScore}</div>
+                    </div>
+                  </div>
                 </div>
                 
                 <motion.button
@@ -502,8 +590,9 @@ const DinoRunPage = () => {
                   <canvas 
                     ref={canvasRef} 
                     width={900} 
-                    height={400} 
+                    height={500} 
                     className="block max-w-full h-auto"
+                    style={{ maxHeight: '60vh' }}
                   />
                 </div>
                 
@@ -514,7 +603,6 @@ const DinoRunPage = () => {
                     whileTap={{ scale: 0.95 }}
                     onTouchStart={(e) => {
                       e.preventDefault()
-                      // Trigger jump
                       const event = new KeyboardEvent('keydown', { code: 'Space' })
                       window.dispatchEvent(event)
                     }}

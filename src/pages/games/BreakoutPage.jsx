@@ -45,28 +45,32 @@ const BreakoutPage = () => {
     const height = canvas.height
     
     // Game objects
-    const ballRadius = 10
-    const paddleHeight = 15
-    const paddleWidth = 100
+    const ballRadius = 12
+    const paddleHeight = 18
+    const paddleWidth = 120
     const brickRowCount = 6
     const brickColumnCount = 10
-    const brickWidth = 70
-    const brickHeight = 25
+    const brickWidth = 75
+    const brickHeight = 30
     const brickPadding = 5
-    const brickOffsetTop = 60
-    const brickOffsetLeft = 35
+    const brickOffsetTop = 80
+    const brickOffsetLeft = (width - (brickColumnCount * (brickWidth + brickPadding) - brickPadding)) / 2
     
     let ballX = width / 2
-    let ballY = height - 50
-    let ballSpeedX = 5 + level * 0.5
-    let ballSpeedY = -5 - level * 0.5
+    let ballY = height - 80
+    let ballSpeedX = 4 + level * 0.3
+    let ballSpeedY = -4 - level * 0.3
     let paddleX = (width - paddleWidth) / 2
     
-    // Create bricks with different colors
+    // Create bricks with different colors and point values
     const bricks = []
     const brickColors = [
-      '#ef4444', '#f97316', '#eab308', 
-      '#22c55e', '#3b82f6', '#8b5cf6'
+      { color: '#ef4444', points: 60 }, // Red - top row, most points
+      { color: '#f97316', points: 50 }, // Orange
+      { color: '#eab308', points: 40 }, // Yellow
+      { color: '#22c55e', points: 30 }, // Green
+      { color: '#3b82f6', points: 20 }, // Blue
+      { color: '#8b5cf6', points: 10 }  // Purple - bottom row, least points
     ]
     
     for (let c = 0; c < brickColumnCount; c++) {
@@ -76,8 +80,10 @@ const BreakoutPage = () => {
           x: 0, 
           y: 0, 
           status: 1,
-          color: brickColors[r],
-          points: (brickRowCount - r) * 10
+          color: brickColors[r].color,
+          points: brickColors[r].points,
+          hits: 0,
+          maxHits: r < 2 ? 2 : 1 // Top 2 rows need 2 hits
         }
       }
     }
@@ -126,7 +132,7 @@ const BreakoutPage = () => {
     canvas.addEventListener('mousemove', handleMouseMove)
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
     
-    // Collision detection with bricks
+    // Enhanced collision detection with bricks
     const collisionDetection = () => {
       for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
@@ -139,8 +145,12 @@ const BreakoutPage = () => {
               ballY < b.y + brickHeight
             ) {
               ballSpeedY = -ballSpeedY
-              b.status = 0
-              setScore(prevScore => prevScore + b.points)
+              b.hits++
+              
+              if (b.hits >= b.maxHits) {
+                b.status = 0
+                setScore(prevScore => prevScore + b.points)
+              }
               
               // Check if all bricks are broken
               let bricksRemaining = 0
@@ -163,20 +173,36 @@ const BreakoutPage = () => {
       }
     }
     
-    // Draw functions
+    // Draw functions with enhanced graphics
     const drawBall = () => {
-      const ballGradient = ctx.createRadialGradient(ballX, ballY, 0, ballX, ballY, ballRadius)
+      // Ball shadow
+      ctx.save()
+      ctx.globalAlpha = 0.3
+      ctx.fillStyle = 'black'
+      ctx.beginPath()
+      ctx.arc(ballX + 2, ballY + 2, ballRadius, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+      
+      // Ball gradient
+      const ballGradient = ctx.createRadialGradient(ballX - 3, ballY - 3, 0, ballX, ballY, ballRadius)
       ballGradient.addColorStop(0, '#ffffff')
-      ballGradient.addColorStop(1, theme === 'dark' ? '#60a5fa' : '#3b82f6')
+      ballGradient.addColorStop(0.3, theme === 'dark' ? '#60a5fa' : '#3b82f6')
+      ballGradient.addColorStop(1, theme === 'dark' ? '#3b82f6' : '#1d4ed8')
       
       ctx.beginPath()
       ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2)
       ctx.fillStyle = ballGradient
       ctx.fill()
       
+      // Ball outline
+      ctx.strokeStyle = theme === 'dark' ? '#1d4ed8' : '#1e3a8a'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
       // Add glow effect
       ctx.shadowColor = theme === 'dark' ? '#60a5fa' : '#3b82f6'
-      ctx.shadowBlur = 10
+      ctx.shadowBlur = 15
       ctx.beginPath()
       ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2)
       ctx.fill()
@@ -184,17 +210,31 @@ const BreakoutPage = () => {
     }
     
     const drawPaddle = () => {
+      // Paddle shadow
+      ctx.save()
+      ctx.globalAlpha = 0.3
+      ctx.fillStyle = 'black'
+      ctx.fillRect(paddleX + 2, height - paddleHeight + 2, paddleWidth, paddleHeight)
+      ctx.restore()
+      
+      // Paddle gradient
       const paddleGradient = ctx.createLinearGradient(paddleX, height - paddleHeight, paddleX, height)
       paddleGradient.addColorStop(0, theme === 'dark' ? '#60a5fa' : '#1e40af')
-      paddleGradient.addColorStop(1, theme === 'dark' ? '#3b82f6' : '#1e3a8a')
+      paddleGradient.addColorStop(0.5, theme === 'dark' ? '#3b82f6' : '#1d4ed8')
+      paddleGradient.addColorStop(1, theme === 'dark' ? '#1d4ed8' : '#1e3a8a')
       
       ctx.fillStyle = paddleGradient
       ctx.fillRect(paddleX, height - paddleHeight, paddleWidth, paddleHeight)
       
-      // Add border
-      ctx.strokeStyle = theme === 'dark' ? '#1e40af' : '#1e3a8a'
+      // Paddle border and highlights
+      ctx.strokeStyle = theme === 'dark' ? '#1e3a8a' : '#1e40af'
       ctx.lineWidth = 2
       ctx.strokeRect(paddleX, height - paddleHeight, paddleWidth, paddleHeight)
+      
+      // Paddle highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(paddleX + 2, height - paddleHeight + 2, paddleWidth - 4, paddleHeight - 4)
     }
     
     const drawBricks = () => {
@@ -206,50 +246,94 @@ const BreakoutPage = () => {
             bricks[c][r].x = brickX
             bricks[c][r].y = brickY
             
-            // Brick gradient
+            // Brick shadow
+            ctx.save()
+            ctx.globalAlpha = 0.3
+            ctx.fillStyle = 'black'
+            ctx.fillRect(brickX + 2, brickY + 2, brickWidth, brickHeight)
+            ctx.restore()
+            
+            // Brick gradient based on hits
             const brickGradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight)
-            brickGradient.addColorStop(0, bricks[c][r].color)
-            brickGradient.addColorStop(1, bricks[c][r].color + '80')
+            const baseColor = bricks[c][r].color
+            const alpha = bricks[c][r].hits > 0 ? '80' : 'FF'
+            
+            brickGradient.addColorStop(0, baseColor)
+            brickGradient.addColorStop(0.5, baseColor + 'CC')
+            brickGradient.addColorStop(1, baseColor + alpha)
             
             ctx.fillStyle = brickGradient
             ctx.fillRect(brickX, brickY, brickWidth, brickHeight)
             
-            // Add brick border and highlight
+            // Brick border
             ctx.strokeStyle = theme === 'dark' ? '#1f2937' : '#ffffff'
-            ctx.lineWidth = 1
+            ctx.lineWidth = 2
             ctx.strokeRect(brickX, brickY, brickWidth, brickHeight)
             
-            // Add highlight
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-            ctx.strokeRect(brickX + 1, brickY + 1, brickWidth - 2, brickHeight - 2)
+            // Brick highlight
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+            ctx.lineWidth = 1
+            ctx.strokeRect(brickX + 2, brickY + 2, brickWidth - 4, brickHeight - 4)
+            
+            // Show hit indicator for multi-hit bricks
+            if (bricks[c][r].maxHits > 1) {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+              ctx.font = 'bold 14px Arial'
+              ctx.textAlign = 'center'
+              ctx.fillText(
+                (bricks[c][r].maxHits - bricks[c][r].hits).toString(),
+                brickX + brickWidth / 2,
+                brickY + brickHeight / 2 + 5
+              )
+            }
           }
         }
       }
     }
     
+    const drawBackground = () => {
+      // Beautiful gradient background
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
+      bgGradient.addColorStop(0, theme === 'dark' ? '#0f172a' : '#f8fafc')
+      bgGradient.addColorStop(0.5, theme === 'dark' ? '#1e293b' : '#f1f5f9')
+      bgGradient.addColorStop(1, theme === 'dark' ? '#334155' : '#e2e8f0')
+      ctx.fillStyle = bgGradient
+      ctx.fillRect(0, 0, width, height)
+      
+      // Add some decorative elements
+      ctx.fillStyle = theme === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath()
+        ctx.arc(width * 0.1 + i * width * 0.2, height * 0.8, 30, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+    
     const drawUI = () => {
-      ctx.font = 'bold 20px Arial'
+      ctx.font = 'bold 24px Arial'
       ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'
+      ctx.strokeStyle = theme === 'dark' ? '#000000' : '#ffffff'
+      ctx.lineWidth = 2
+      
       ctx.textAlign = 'left'
-      ctx.fillText(`Score: ${score}`, 20, 30)
-      ctx.fillText(`Lives: ${lives}`, 20, 55)
+      ctx.strokeText(`Score: ${score}`, 20, 40)
+      ctx.fillText(`Score: ${score}`, 20, 40)
+      
+      ctx.strokeText(`Lives: ${lives}`, 20, 70)
+      ctx.fillText(`Lives: ${lives}`, 20, 70)
       
       ctx.textAlign = 'right'
-      ctx.fillText(`Level: ${level}`, width - 20, 30)
-      ctx.fillText(`High: ${highScore}`, width - 20, 55)
+      ctx.strokeText(`Level: ${level}`, width - 20, 40)
+      ctx.fillText(`Level: ${level}`, width - 20, 40)
+      
+      ctx.strokeText(`High: ${highScore}`, width - 20, 70)
+      ctx.fillText(`High: ${highScore}`, width - 20, 70)
     }
     
     // Game loop
     const gameLoop = setInterval(() => {
-      // Clear canvas
-      ctx.clearRect(0, 0, width, height)
-      
-      // Draw background
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
-      bgGradient.addColorStop(0, theme === 'dark' ? '#1e293b' : '#f1f5f9')
-      bgGradient.addColorStop(1, theme === 'dark' ? '#0f172a' : '#e2e8f0')
-      ctx.fillStyle = bgGradient
-      ctx.fillRect(0, 0, width, height)
+      // Clear canvas and draw background
+      drawBackground()
       
       // Draw game objects
       drawBricks()
@@ -261,9 +345,9 @@ const BreakoutPage = () => {
       
       // Move paddle
       if (rightPressed && paddleX < width - paddleWidth) {
-        paddleX += 8
+        paddleX += 10
       } else if (leftPressed && paddleX > 0) {
-        paddleX -= 8
+        paddleX -= 10
       }
       
       // Ball movement and collision
@@ -280,19 +364,28 @@ const BreakoutPage = () => {
         ballSpeedY = -ballSpeedY
       }
       
-      // Collision with paddle
+      // Enhanced collision with paddle
       if (
         ballY + ballRadius > height - paddleHeight &&
         ballX > paddleX &&
         ballX < paddleX + paddleWidth
       ) {
-        // Change ball direction based on where it hits the paddle
+        // Calculate hit position on paddle (0 to 1)
         const hitPosition = (ballX - paddleX) / paddleWidth
-        const angle = (hitPosition - 0.5) * Math.PI / 3 // -60 to 60 degrees
         
+        // Calculate new angle based on hit position
+        const maxAngle = Math.PI / 3 // 60 degrees
+        const angle = (hitPosition - 0.5) * maxAngle
+        
+        // Calculate new velocity
         const speed = Math.sqrt(ballSpeedX * ballSpeedX + ballSpeedY * ballSpeedY)
         ballSpeedX = speed * Math.sin(angle)
         ballSpeedY = -Math.abs(speed * Math.cos(angle))
+        
+        // Ensure minimum upward velocity
+        if (ballSpeedY > -2) {
+          ballSpeedY = -2
+        }
       }
       
       // Ball falls below screen
@@ -307,9 +400,9 @@ const BreakoutPage = () => {
         
         // Reset ball and paddle
         ballX = width / 2
-        ballY = height - 50
-        ballSpeedX = 5 + level * 0.5
-        ballSpeedY = -5 - level * 0.5
+        ballY = height - 80
+        ballSpeedX = 4 + level * 0.3
+        ballSpeedY = -4 - level * 0.3
         paddleX = (width - paddleWidth) / 2
       }
       
@@ -373,7 +466,12 @@ const BreakoutPage = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Use arrow keys, A/D, or mouse to move. Spacebar or P to pause.
                   </p>
-                  <p className="text-lg font-semibold">High Score: {highScore}</p>
+                  <div className="flex justify-center items-center gap-4 mb-4">
+                    <div className={`px-4 py-2 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                      <span className="text-sm opacity-75">High Score</span>
+                      <div className="text-2xl font-bold font-orbitron text-orange-500">{highScore}</div>
+                    </div>
+                  </div>
                 </div>
                 
                 <motion.button
@@ -388,8 +486,24 @@ const BreakoutPage = () => {
             ) : gamePaused ? (
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-4">Game Paused</h2>
-                <p className="text-xl mb-2">Current Score: {score}</p>
-                <p className="text-lg mb-6">Level: {level} | Lives: {lives}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Score</div>
+                    <div className="text-xl font-bold">{score}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Lives</div>
+                    <div className="text-xl font-bold">{lives}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Level</div>
+                    <div className="text-xl font-bold">{level}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">High</div>
+                    <div className="text-xl font-bold text-orange-500">{highScore}</div>
+                  </div>
+                </div>
                 
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -402,26 +516,22 @@ const BreakoutPage = () => {
               </div>
             ) : (
               <>
-                <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
-                  <div className="text-lg font-bold">Score: {score} | Lives: {lives} | Level: {level}</div>
-                  <div className="flex gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setGamePaused(true)}
-                      className="py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-medium rounded-lg transition-all duration-300"
-                    >
-                      Pause
-                    </motion.button>
-                    
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={resetGame}
-                      className="py-2 px-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-medium rounded-lg transition-all duration-300"
-                    >
-                      Restart
-                    </motion.button>
+                <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Score</div>
+                    <div className="text-xl font-bold font-orbitron">{score}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Lives</div>
+                    <div className="text-xl font-bold">{lives}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Level</div>
+                    <div className="text-xl font-bold">{level}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">High</div>
+                    <div className="text-xl font-bold text-orange-500">{highScore}</div>
                   </div>
                 </div>
                 
@@ -429,9 +539,30 @@ const BreakoutPage = () => {
                   <canvas 
                     ref={canvasRef} 
                     width={800} 
-                    height={500} 
+                    height={600} 
                     className="block max-w-full h-auto"
+                    style={{ maxHeight: '60vh' }}
                   />
+                </div>
+                
+                <div className="mt-4 flex gap-2 justify-center flex-wrap">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setGamePaused(true)}
+                    className="py-2 px-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    Pause
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={resetGame}
+                    className="py-2 px-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    Restart
+                  </motion.button>
                 </div>
                 
                 <div className="mt-4">

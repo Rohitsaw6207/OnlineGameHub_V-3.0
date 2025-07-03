@@ -42,29 +42,27 @@ const HelixJumpPage = () => {
     const height = canvas.height
     
     // Game settings
-    const towerRadius = 140
-    const ballRadius = 18
-    const platformHeight = 25
-    const platformGap = 100
-    const numberOfPlatforms = 12
-    let rotationSpeed = 0.03
-    let ballFallSpeed = 6
-    let gameSpeed = 1 + (level * 0.15)
+    const towerRadius = 120
+    const ballRadius = 15
+    const platformHeight = 20
+    const platformGap = 80
+    const numberOfPlatforms = 15
+    let gameSpeed = 1 + (level * 0.1)
     
     // Game objects
     const ball = {
       x: width / 2,
-      y: 80,
+      y: 100,
       radius: ballRadius,
       falling: true,
-      platformIndex: -1,
-      velocity: 0
+      velocity: 0,
+      bounceHeight: 0
     }
     
     // Tower rotation
     let towerRotation = 0
     let mouseX = width / 2
-    let mouseY = height / 2
+    let targetRotation = 0
     
     // Create platforms with gaps and colors
     const createPlatforms = () => {
@@ -76,9 +74,9 @@ const HelixJumpPage = () => {
       
       for (let i = 0; i < numberOfPlatforms; i++) {
         const y = height - (i * platformGap) - platformHeight
-        const gapWidth = Math.PI * (0.25 + Math.random() * 0.2)
+        const gapWidth = Math.PI * (0.3 + Math.random() * 0.2)
         const gapPosition = Math.random() * Math.PI * 2
-        const dangerous = Math.random() < 0.2 + (level * 0.05)
+        const dangerous = Math.random() < 0.15 + (level * 0.03)
         
         platforms.push({
           y,
@@ -86,7 +84,8 @@ const HelixJumpPage = () => {
           gapWidth,
           dangerous,
           color: colors[i % colors.length],
-          passed: false
+          passed: false,
+          rotation: Math.random() * Math.PI * 2
         })
       }
       return platforms
@@ -98,14 +97,14 @@ const HelixJumpPage = () => {
     const handleMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect()
       mouseX = e.clientX - rect.left
-      mouseY = e.clientY - rect.top
+      targetRotation = ((mouseX - width / 2) / width) * Math.PI * 2
     }
     
     const handleTouchMove = (e) => {
       e.preventDefault()
       const rect = canvas.getBoundingClientRect()
       mouseX = e.touches[0].clientX - rect.left
-      mouseY = e.touches[0].clientY - rect.top
+      targetRotation = ((mouseX - width / 2) / width) * Math.PI * 2
     }
     
     canvas.addEventListener('mousemove', handleMouseMove)
@@ -122,21 +121,17 @@ const HelixJumpPage = () => {
         normalizedGapEnd += Math.PI * 2
       }
       
-      if (platform.dangerous) {
-        return normalizedBallAngle >= normalizedGapStart && normalizedBallAngle <= normalizedGapEnd
-      } else {
-        return normalizedBallAngle >= normalizedGapStart && normalizedBallAngle <= normalizedGapEnd
-      }
+      return normalizedBallAngle >= normalizedGapStart && normalizedBallAngle <= normalizedGapEnd
     }
     
-    // Draw platform
+    // Draw platform with enhanced graphics
     const drawPlatform = (platform, yOffset) => {
       ctx.save()
       ctx.translate(width / 2, height / 2 + yOffset)
-      ctx.rotate(towerRotation)
+      ctx.rotate(towerRotation + platform.rotation * 0.1)
       
-      // Draw platform segments
-      const segments = 32
+      // Draw platform segments with 3D effect
+      const segments = 48
       const angleStep = (Math.PI * 2) / segments
       
       for (let i = 0; i < segments; i++) {
@@ -147,27 +142,37 @@ const HelixJumpPage = () => {
         const inGap = angle >= platform.gapPosition && angle <= platform.gapPosition + platform.gapWidth
         
         if (!inGap) {
+          // Create 3D gradient effect
+          const gradient = ctx.createRadialGradient(0, 0, towerRadius - platformHeight, 0, 0, towerRadius)
+          
+          if (platform.dangerous) {
+            gradient.addColorStop(0, '#dc2626')
+            gradient.addColorStop(0.5, '#ef4444')
+            gradient.addColorStop(1, '#fca5a5')
+          } else {
+            gradient.addColorStop(0, platform.color)
+            gradient.addColorStop(0.5, platform.color + 'CC')
+            gradient.addColorStop(1, platform.color + '80')
+          }
+          
           ctx.beginPath()
           ctx.arc(0, 0, towerRadius, angle, nextAngle)
           ctx.arc(0, 0, towerRadius - platformHeight, nextAngle, angle, true)
           ctx.closePath()
           
-          // Platform color with gradient
-          const gradient = ctx.createRadialGradient(0, 0, towerRadius - platformHeight, 0, 0, towerRadius)
-          if (platform.dangerous) {
-            gradient.addColorStop(0, '#dc2626')
-            gradient.addColorStop(1, '#ef4444')
-          } else {
-            gradient.addColorStop(0, platform.color)
-            gradient.addColorStop(1, platform.color + '80')
-          }
-          
           ctx.fillStyle = gradient
           ctx.fill()
           
-          // Add border
+          // Add border and highlights
           ctx.strokeStyle = theme === 'dark' ? '#1f2937' : '#ffffff'
-          ctx.lineWidth = 2
+          ctx.lineWidth = 1
+          ctx.stroke()
+          
+          // Add inner highlight
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+          ctx.lineWidth = 0.5
+          ctx.beginPath()
+          ctx.arc(0, 0, towerRadius - 2, angle, nextAngle)
           ctx.stroke()
         }
       }
@@ -175,47 +180,64 @@ const HelixJumpPage = () => {
       ctx.restore()
     }
     
-    // Draw ball
+    // Draw ball with enhanced graphics
     const drawBall = () => {
+      // Ball shadow
+      ctx.save()
+      ctx.globalAlpha = 0.3
+      ctx.fillStyle = 'black'
+      ctx.beginPath()
+      ctx.arc(ball.x + 3, ball.y + 3, ball.radius, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+      
+      // Ball gradient
       const ballGradient = ctx.createRadialGradient(
         ball.x - 5, ball.y - 5, 0,
         ball.x, ball.y, ball.radius
       )
       ballGradient.addColorStop(0, '#ffffff')
-      ballGradient.addColorStop(1, '#f59e0b')
+      ballGradient.addColorStop(0.3, '#f59e0b')
+      ballGradient.addColorStop(1, '#d97706')
       
       ctx.beginPath()
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2)
       ctx.fillStyle = ballGradient
       ctx.fill()
       
+      // Ball outline
+      ctx.strokeStyle = '#92400e'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
       // Add glow effect
       ctx.shadowColor = '#f59e0b'
-      ctx.shadowBlur = 15
+      ctx.shadowBlur = 20
       ctx.beginPath()
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2)
       ctx.fill()
       ctx.shadowBlur = 0
       
-      // Add highlight
+      // Ball highlight
       ctx.beginPath()
-      ctx.arc(ball.x - 5, ball.y - 5, 4, 0, Math.PI * 2)
+      ctx.arc(ball.x - 4, ball.y - 4, 3, 0, Math.PI * 2)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
       ctx.fill()
     }
     
     // Draw tower structure
     const drawTower = () => {
-      // Draw vertical lines
       ctx.save()
       ctx.translate(width / 2, height / 2)
       ctx.rotate(towerRotation)
       
+      // Draw vertical support lines
       ctx.strokeStyle = theme === 'dark' ? '#374151' : '#9ca3af'
       ctx.lineWidth = 1
+      ctx.globalAlpha = 0.3
       
-      for (let i = 0; i < 16; i++) {
-        const angle = (i / 16) * Math.PI * 2
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2
         ctx.beginPath()
         ctx.moveTo(towerRadius * Math.cos(angle), -height)
         ctx.lineTo(towerRadius * Math.cos(angle), height)
@@ -232,23 +254,17 @@ const HelixJumpPage = () => {
       // Clear canvas
       ctx.clearRect(0, 0, width, height)
       
-      // Draw background gradient
+      // Draw beautiful gradient background
       const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
       bgGradient.addColorStop(0, theme === 'dark' ? '#0f172a' : '#f0f9ff')
-      bgGradient.addColorStop(1, theme === 'dark' ? '#1e293b' : '#e0f2fe')
+      bgGradient.addColorStop(0.5, theme === 'dark' ? '#1e293b' : '#e0f2fe')
+      bgGradient.addColorStop(1, theme === 'dark' ? '#334155' : '#bae6fd')
       ctx.fillStyle = bgGradient
       ctx.fillRect(0, 0, width, height)
       
-      // Update tower rotation based on mouse position
-      const targetRotation = Math.atan2(mouseY - height / 2, mouseX - width / 2)
+      // Smooth tower rotation
       const rotationDiff = targetRotation - towerRotation
-      
-      // Normalize rotation difference
-      let normalizedDiff = rotationDiff
-      if (normalizedDiff > Math.PI) normalizedDiff -= Math.PI * 2
-      if (normalizedDiff < -Math.PI) normalizedDiff += Math.PI * 2
-      
-      towerRotation += normalizedDiff * 0.1 * gameSpeed
+      towerRotation += rotationDiff * 0.1 * gameSpeed
       
       // Draw tower structure
       drawTower()
@@ -259,9 +275,9 @@ const HelixJumpPage = () => {
         drawPlatform(platform, yOffset)
       })
       
-      // Update ball
+      // Update ball physics
       if (ball.falling) {
-        ball.velocity += 0.5
+        ball.velocity += 0.6
         ball.y += ball.velocity * gameSpeed
         
         // Check collision with platforms
@@ -285,7 +301,7 @@ const HelixJumpPage = () => {
               ball.falling = false
               ball.y = platform.y - ball.radius
               ball.velocity = 0
-              ball.platformIndex = index
+              ball.bounceHeight = platform.y
               
               if (!platform.passed) {
                 platform.passed = true
@@ -302,7 +318,9 @@ const HelixJumpPage = () => {
         }
       } else {
         // Ball is on platform, check if it can fall through gap
-        const currentPlatform = platforms[ball.platformIndex]
+        const currentPlatform = platforms.find(p => 
+          Math.abs(ball.y + ball.radius - p.y) < 5
+        )
         
         if (currentPlatform && isInGap(currentPlatform)) {
           ball.falling = true
@@ -312,12 +330,12 @@ const HelixJumpPage = () => {
       }
       
       // Move platforms up if ball reaches top area
-      if (ball.y < height / 4) {
-        const diff = height / 4 - ball.y
-        ball.y += diff * 0.2
+      if (ball.y < height / 3) {
+        const diff = height / 3 - ball.y
+        ball.y += diff * 0.3
         
         platforms.forEach(platform => {
-          platform.y += diff * 0.2
+          platform.y += diff * 0.3
         })
         
         // Remove platforms that go below screen and add new ones at top
@@ -334,17 +352,18 @@ const HelixJumpPage = () => {
           platforms.push({
             y: newY,
             gapPosition: Math.random() * Math.PI * 2,
-            gapWidth: Math.PI * (0.25 + Math.random() * 0.2),
-            dangerous: Math.random() < 0.2 + (level * 0.05),
+            gapWidth: Math.PI * (0.3 + Math.random() * 0.2),
+            dangerous: Math.random() < 0.15 + (level * 0.03),
             color: colors[Math.floor(Math.random() * colors.length)],
-            passed: false
+            passed: false,
+            rotation: Math.random() * Math.PI * 2
           })
           
-          // Increase level every 10 platforms
-          if (platforms.length % 10 === 0) {
+          // Increase level every 15 platforms
+          if (platforms.length % 15 === 0) {
             setLevel(prevLevel => {
               const newLevel = prevLevel + 1
-              gameSpeed = 1 + (newLevel * 0.15)
+              gameSpeed = 1 + (newLevel * 0.1)
               return newLevel
             })
           }
@@ -354,16 +373,22 @@ const HelixJumpPage = () => {
       // Draw ball
       drawBall()
       
-      // Draw UI
+      // Draw UI with enhanced styling
       ctx.font = 'bold 24px Arial'
       ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'
+      ctx.strokeStyle = theme === 'dark' ? '#000000' : '#ffffff'
+      ctx.lineWidth = 3
+      
       ctx.textAlign = 'left'
+      ctx.strokeText(`Score: ${score}`, 20, 40)
       ctx.fillText(`Score: ${score}`, 20, 40)
       
       ctx.textAlign = 'right'
+      ctx.strokeText(`Level: ${level}`, width - 20, 40)
       ctx.fillText(`Level: ${level}`, width - 20, 40)
       
       ctx.textAlign = 'center'
+      ctx.strokeText(`High: ${highScore}`, width / 2, 40)
       ctx.fillText(`High: ${highScore}`, width / 2, 40)
       
     }, 1000 / 60) // 60 FPS
@@ -417,7 +442,12 @@ const HelixJumpPage = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Move your mouse or finger to rotate the tower. Avoid red platforms!
                   </p>
-                  <p className="text-lg font-semibold">High Score: {highScore}</p>
+                  <div className="flex justify-center items-center gap-4 mb-4">
+                    <div className={`px-4 py-2 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                      <span className="text-sm opacity-75">High Score</span>
+                      <div className="text-2xl font-bold font-orbitron text-blue-500">{highScore}</div>
+                    </div>
+                  </div>
                 </div>
                 
                 <motion.button
@@ -431,18 +461,19 @@ const HelixJumpPage = () => {
               </div>
             ) : (
               <>
-                <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
-                  <div className="text-xl font-bold font-orbitron">Score: {score}</div>
-                  <div className="text-lg">Level: {level}</div>
-                  <div className="text-lg">High: {highScore}</div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={resetGame}
-                    className="py-2 px-4 bg-gradient-to-r from-red-600 to-pink-600 text-white font-medium rounded-lg transition-all duration-300"
-                  >
-                    Restart
-                  </motion.button>
+                <div className="mb-4 grid grid-cols-3 gap-4">
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Score</div>
+                    <div className="text-xl font-bold font-orbitron">{score}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">Level</div>
+                    <div className="text-xl font-bold">{level}</div>
+                  </div>
+                  <div className={`text-center p-3 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/50'}`}>
+                    <div className="text-sm opacity-75">High</div>
+                    <div className="text-xl font-bold text-blue-500">{highScore}</div>
+                  </div>
                 </div>
                 
                 <div className="relative overflow-hidden rounded-xl border-2 border-gray-300 dark:border-gray-600 mx-auto" style={{ width: 'fit-content' }}>
@@ -451,7 +482,19 @@ const HelixJumpPage = () => {
                     width={500} 
                     height={700} 
                     className="block max-w-full h-auto"
+                    style={{ maxHeight: '70vh' }}
                   />
+                </div>
+                
+                <div className="mt-4 flex justify-center">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={resetGame}
+                    className="py-2 px-6 bg-gradient-to-r from-red-600 to-pink-600 text-white font-medium rounded-lg transition-all duration-300"
+                  >
+                    Restart
+                  </motion.button>
                 </div>
                 
                 <div className="mt-4">
