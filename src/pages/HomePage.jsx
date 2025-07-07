@@ -159,7 +159,7 @@ const HomePage = () => {
           <p className={`text-xl ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} max-w-3xl mx-auto`}>
             Discover our collection of engaging games, from timeless classics to modern favorites
           </p>
-          {currentUser && (
+          {currentUser ? (
             <motion.p 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -167,6 +167,15 @@ const HomePage = () => {
               className={`text-lg mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
             >
               Welcome back, <span className="font-semibold font-orbitron bg-gradient-to-r from-purple-500 to-cyan-500 bg-clip-text text-transparent">{currentUser.firstName}</span>!
+            </motion.p>
+          ) : (
+            <motion.p 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className={`text-lg mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+            >
+              Playing as <span className="font-semibold font-orbitron bg-gradient-to-r from-purple-500 to-cyan-500 bg-clip-text text-transparent">Guest</span> - Sign up to save your progress!
             </motion.p>
           )}
         </motion.div>
@@ -214,7 +223,9 @@ const HomePage = () => {
               {
                 icon: '🏆',
                 title: "Track Progress",
-                description: "Save your progress, track high scores, and unlock achievements as you play.",
+                description: currentUser 
+                  ? "Save your progress, track high scores, and unlock achievements as you play."
+                  : "Sign up to save your progress, track high scores, and unlock achievements!",
                 gradient: "from-yellow-500 to-orange-500"
               }
             ].map((feature, index) => (

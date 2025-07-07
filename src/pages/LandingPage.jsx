@@ -15,11 +15,8 @@ const LandingPage = () => {
   }, [])
 
   const handleStartPlaying = () => {
-    if (currentUser) {
-      navigate('/home')
-    } else {
-      navigate('/signup')
-    }
+    // Always redirect to home page - no login required
+    navigate('/home')
   }
 
   const features = [
@@ -115,20 +112,18 @@ const LandingPage = () => {
               </Link>
             </motion.div>
 
-            {!currentUser && (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                to="/login"
+                className={`px-8 py-4 border-2 ${theme === 'dark' ? 'border-purple-400 text-purple-400 hover:bg-purple-400' : 'border-purple-600 text-purple-600 hover:bg-purple-600'} hover:text-white font-bold font-orbitron rounded-full text-lg transition-all duration-300 inline-block`}
               >
-                <Link
-                  to="/login"
-                  className={`px-8 py-4 border-2 ${theme === 'dark' ? 'border-purple-400 text-purple-400 hover:bg-purple-400' : 'border-purple-600 text-purple-600 hover:bg-purple-600'} hover:text-white font-bold font-orbitron rounded-full text-lg transition-all duration-300 inline-block`}
-                >
-                  <FaGamepad className="inline mr-2" />
-                  Log In
-                </Link>
-              </motion.div>
-            )}
+                <FaGamepad className="inline mr-2" />
+                Log In
+              </Link>
+            </motion.div>
           </motion.div>
         </motion.div>
 

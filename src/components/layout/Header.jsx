@@ -11,7 +11,9 @@ const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false)
   const location = useLocation()
 
-  const toggleDropdown = () => setShowDropdown(!showDropdown)
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown)
+  }
 
   const handleLogout = () => {
     logout()
@@ -28,7 +30,6 @@ const Header = () => {
       className={`sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-900/90' : 'bg-white/90'} backdrop-blur-md border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} transition-all duration-300`}
     >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        
         {/* Logo & Title */}
         <Link to={currentUser ? "/home" : "/"} className="flex items-center gap-3 group">
           <motion.div 
@@ -49,22 +50,20 @@ const Header = () => {
 
         {/* Navigation */}
         <div className="flex items-center gap-4">
-          
-          {/* Home Button */}
+          {/* Home Button - only show if not on landing page */}
           {!isLandingPage && (
-            <motion.button 
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className={`p-3 rounded-full ${theme === 'dark' ? 'hover:bg-gray-800 hover:shadow-lg hover:shadow-cyan-500/20' : 'hover:bg-gray-100 hover:shadow-lg hover:shadow-cyan-500/20'} transition-all duration-300 relative overflow-hidden group`}
-              title="Home"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
-              <Link to="/home" className="relative z-10">
-                <FaHome className={`text-xl ${theme === 'dark' ? 'text-white' : 'text-gray-700'} group-hover:text-cyan-400 transition-colors`} />
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <Link 
+                to="/home"
+                className={`relative p-3 rounded-full ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} transition-all duration-300 group overflow-hidden`}
+                title="Home"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
+                <FaHome className="text-xl group-hover:text-purple-500 transition-colors relative z-10" />
               </Link>
-            </motion.button>
+            </motion.div>
           )}
-
+          
           {/* Theme Toggle */}
           <motion.button 
             whileHover={{ scale: 1.1 }}
@@ -100,7 +99,7 @@ const Header = () => {
               )}
             </AnimatePresence>
           </motion.button>
-
+          
           {/* User Profile */}
           <div className="relative">
             <motion.button
@@ -156,7 +155,7 @@ const Header = () => {
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{currentUser.email}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser.phone || 'No phone number'}</p>
                       </div>
-
+                      
                       <Link 
                         to="/profile" 
                         className={`flex items-center gap-3 px-4 py-3 text-sm ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}
@@ -165,7 +164,7 @@ const Header = () => {
                         <FaCog className="text-purple-500" />
                         View Profile
                       </Link>
-
+                      
                       <button
                         onClick={handleLogout}
                         className={`flex items-center gap-3 w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} transition-colors`}

@@ -31,11 +31,13 @@ function App() {
       <Header />
       <main className="flex-grow">
         <Routes>
-          {/* Landing page for non-authenticated users, home for authenticated */}
+          {/* Landing page only for non-authenticated users */}
           <Route path="/" element={currentUser ? <HomePage /> : <LandingPage />} />
+          
+          {/* Home page accessible to everyone */}
           <Route path="/home" element={<HomePage />} />
           
-          {/* Game Routes */}
+          {/* Game Routes - accessible to everyone */}
           <Route path="/tic-tac-toe" element={<TicTacToePage />} />
           <Route path="/snake-game" element={<SnakeGamePage />} />
           <Route path="/sudoku" element={<SudokuPage />} />
