@@ -65,21 +65,21 @@ const Footer = () => {
             {[
               { 
                 icon: FaEnvelope, 
-                href: "mailto:rohit@example.com", 
+                href: "mailto:rohitku6207@gmail.com", 
                 label: "Email", 
                 color: "hover:text-red-500",
                 gradient: "from-red-500 to-pink-500"
               },
               { 
                 icon: FaLinkedin, 
-                href: "https://linkedin.com", 
+                href: "https://www.linkedin.com/in/rohit-kumar-saw6207/", 
                 label: "LinkedIn", 
                 color: "hover:text-blue-500",
                 gradient: "from-blue-500 to-cyan-500"
               },
               { 
                 icon: FaGithub, 
-                href: "https://github.com", 
+                href: "https://github.com/Rohitsaw6207", 
                 label: "GitHub", 
                 color: "hover:text-gray-600",
                 gradient: "from-gray-600 to-gray-800"
